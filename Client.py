@@ -36,9 +36,12 @@ while True:
             except:
                 pass
             sys.exit()
-        if message == '!!clear':
-            os.system('cls')
-            continue
         message = message.encode('utf-8')
         message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
         client_socket.send(message_header + message)
+        if message == '!!exit':
+            try:
+                client_socket.close()
+            except:
+                pass
+            sys.exit()
