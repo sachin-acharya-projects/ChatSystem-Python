@@ -3,13 +3,13 @@ It is a simple chat application made using Python Programming language and ofcou
 
 It have three scripts
 
-- Server.py
+- __Server.py__  
   This is a server-side of the application which handles the communications between multiple clients
 
-- Client.py
+- __Client.py__  
   This is a client-side of the application which handles outgoing messages - sending messages to server which inturns sent over to other clients
  
- - Receiver.py
+ - __Receiver.py__  
   This handles incoming messages - display them and probably other connection just connected (Joining of new users to chat). Without using some sort of GUI interface,
   we cannot display incoming message and taking input from user at the same time, so two script are used to handle them separately. 
   
