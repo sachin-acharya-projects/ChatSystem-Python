@@ -1,5 +1,6 @@
 # Socket-ChatBox-Python
 It is a simple chat application made using Python Programming language and ofcourse database-less. This application can be used to communicate anonymously 🤣🤣. 
+
 It have three scripts
 
 - Server.py
