@@ -21,3 +21,9 @@ Most of the packages are built-in
 ````
 pip install colorama
 ````
+
+**Potential Upgrades**:
+- More Refined UI - Still Console
+- File sharing between Clients
+- Video Communication
+- Audio Communication
