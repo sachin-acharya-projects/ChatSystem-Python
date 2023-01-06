@@ -2,3 +2,7 @@ __pycache__
 dist
 build
 touch.py
+devian.py
+log.txt
+longest_text.py
+test.py
