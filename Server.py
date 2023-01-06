@@ -41,16 +41,18 @@ try:
                 client_socket, client_address = server_socket.accept()
 
                 user = receive_message(client_socket)
-                if user is False:
+                if not user:
                     continue
                 socket_list.append(client_socket)
                 clients[client_socket] = user
                 decoded_user = user['data'].decode('utf-8')
                 ColoredText.info(f"[NEW CONNECTION] {client_address[0]}:{client_address[1]} {'':<{8}} - {decoded_user}")
                 date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                msg = "{}\n[CONNECTED - {}] {}\n".format(Fore.LIGHTYELLOW_EX, date, decoded_user)
+                # msg = "{}\n[CONNECTED - {}] {}\n".format(Fore.LIGHTYELLOW_EX, date, decoded_user)
+                msg = "[CONNECTED - {}] {}\n".format(date, decoded_user)
                 msg = msg.encode('utf-8')
                 msg_header = f"{len(msg):<{HEADER_LENGTH}}".encode('utf-8')
+                print(messages_chunks) # Send this previous messages properly to user
                 for message_chunk in messages_chunks:
                     client_socket.send(message_chunk)
                 for client_sock in clients:
@@ -74,11 +76,18 @@ try:
                 
                 for client_socket in clients:
                     if client_socket != notified_socket:
-                        date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        message_ = f"\n{Fore.MAGENTA}{Style.BRIGHT}[{user['data'].decode('utf-8')}] {date}\n".encode('utf-8') + f"{Fore.WHITE}".encode('utf-8') + message['data']
+                        date: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        # message_ = f"\n{Fore.MAGENTA}{Style.BRIGHT}[{user['data'].decode('utf-8')}] {date}\n".encode('utf-8') + f"{Fore.WHITE}".encode('utf-8') + message['data']
+                        message_ = f"[{user['data'].decode('utf-8')}] {date}\n".encode('utf-8') + message['data']
                         msg_header = f"{len(message_):<{HEADER_LENGTH}}".encode('utf-8')
-                        client_socket.send(user['header'] + user['data'] + msg_header + message_)
-                        messages_chunks.append(user['header'] + user['data'] + msg_header + message_)
+                        
+                        new_username: bytes = str(user['data'].decode('utf-8') + " (" + date + ")").encode('utf-8')
+                        new_header: bytes = f"{len(new_username):<{HEADER_LENGTH}}".encode('utf-8')
+                        print(new_header, new_username)
+                        # recv = user['header'] + user['data'] + msg_header + message['data']
+                        recv = new_header + new_username + msg_header + message['data']
+                        client_socket.send(recv)
+                        messages_chunks.append(recv)
                 for notified_socket in exception_sockets:
                     socket_list.remove(notified_socket)
                     del clients[notified_socket]
