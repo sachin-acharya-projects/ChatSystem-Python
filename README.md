@@ -23,7 +23,8 @@ pip install colorama
 ````
 
 **Potential Upgrades**:
-- More Refined UI - Still Console
 - File sharing between Clients
 - Video Communication
 - Audio Communication
+- UI for signin and sign-up
+- Separate Chatroom
