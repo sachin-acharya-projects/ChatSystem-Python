@@ -1,6 +1,5 @@
-from coloredPrint import ColoredText, Fore
 from cursed.window import CursedWindow # I know
-import socket, os, sys, curses, errno
+import socket, curses, errno # os, sys
 
 class ClientHandle:
     HEADER_LENGTH: int = 10
@@ -53,7 +52,6 @@ class ClientHandle:
                 return False
             username_length: int = int(username_header.decode('utf-8').strip())
             username: str = self.client_socket.recv(username_length).decode('utf-8')
-            
             message_header: bytes = self.client_socket.recv(self.HEADER_LENGTH)
             message_length: int = int(message_header.decode('utf-8').strip())
             message: str = self.client_socket.recv(message_length).decode('utf-8')

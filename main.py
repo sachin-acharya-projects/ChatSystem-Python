@@ -1,23 +1,26 @@
 from curses import wrapper
 from curses.textpad import Textbox
 from threading import Thread
-from Clients_1 import ClientHandle
-import curses, os
+from clientHandle import ClientHandle
+import curses, inspect # os
 
 # Global Variables
 isFirst = True
 closeConnection = False
 isFirstMessage = True
-"""
-    for i in range(100000):
-        newpad.addstr(str(i) + "\n")
-        pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
-"""
+def whichIsParent():
+    return inspect.stack()[2][3]
+def print_stuff(*array):
+    print("From " + whichIsParent(), " ".join(array))
 def setCloseConnection(reset=False):
     global closeConnection
     if reset:
         closeConnection = True
     return closeConnection
+def isSubpadFull(subpad, len_: int = 0):
+    height, _ = subpad.getmaxyx()
+    cursor_y, _ = subpad.getyx()
+    return (cursor_y + len_) > height - 2
 def handleReceivedMessages(parent, refresh_param: tuple, window, clientHandle: ClientHandle):
     global isFirstMessage
     while True:
@@ -25,14 +28,18 @@ def handleReceivedMessages(parent, refresh_param: tuple, window, clientHandle: C
             break
         incomming: tuple(str, str) = clientHandle.getMessage()
         if incomming:
+            username, message = incomming
             if isFirstMessage:
                 window.clear()
                 isFirstMessage = False
-            username, message = incomming
+            if isSubpadFull(window, len(str(username + message).split("\n"))):
+                window.clear()
+                parent.refresh(*refresh_param)
             window.attron(curses.color_pair(3))
             window.addstr("[{}]\n".format(username.title()))
             window.attroff(curses.color_pair(3))
-            window.addstr("""  {}""".format(message))
+            for mess in message.split("\n"):
+                window.addstr("""  {}\n""".format(mess))
             window.addstr("\n")
             parent.refresh(*refresh_param)
 def update(n=None):
@@ -93,7 +100,6 @@ def main(stdscr: curses.initscr, USERNAME: str = "Guest"):
     newpad = pad.subpad(win_one_height - 2, win_one_width - 2, 1, 1)
     newpad.scrollok(True)
 
-    # Display initial Context
     message = "WELCOME TO CHATBOX BY SOCKET"
     message_diff = int(((win_one_width - 2) // 2)) + len(message) // 2
     string: str = f"{message:>{message_diff}}"
@@ -108,6 +114,7 @@ def main(stdscr: curses.initscr, USERNAME: str = "Guest"):
     message = attaching_string + "Logged in as {}".format(USERNAME) + attaching_string
     message_diff = int(((win_one_width - 2) // 2)) + len(message) // 2
     string: str = f"{message:>{message_diff}}"
+    newpad.addstr("\n")
     newpad.addstr(string)
     newpad.addstr("\n")
     newpad.addstr(f"""
@@ -132,7 +139,7 @@ def main(stdscr: curses.initscr, USERNAME: str = "Guest"):
     window.refresh()
 
     box = Textbox(subwindow, insert_mode=True) # disable previous character overiding
-    subwindow.addstr("Enter your Message")
+    subwindow.addstr("Press [ENTER] to continue")
     subwindow.refresh()
     clientHandle = ClientHandle(pad, newpad, (0, 0, 0, 0, win_one_height, win_one_width),USERNAME)
     clientHandle.connectToserver()
@@ -148,6 +155,18 @@ def main(stdscr: curses.initscr, USERNAME: str = "Guest"):
             break
         if text.strip().startswith(":"):
             # Handle explictly as system command
+            if ";" in text:
+                commands: list[str] = text.split(";")
+                for command in commands:
+                    if command.lower().startswith("!!"):
+                        if not clientHandle.sendMessage(command.strip()):
+                            newpad.addstr("[CONNECTION CLOSED]", curses.color_pair(5))
+                            clientHandle.closeConnection()
+                            setCloseConnection(True)
+                    if command.lower() == ':exit':
+                        clientHandle.closeConnection()
+                        setCloseConnection(True)
+                        break
             continue
         global isFirstMessage
         if isFirstMessage:
@@ -160,12 +179,18 @@ def main(stdscr: curses.initscr, USERNAME: str = "Guest"):
             clientHandle.closeConnection()
             setCloseConnection(True)
         else:
-            newpad.attron(curses.color_pair(3))
-            newpad.addstr("[{}]\n".format(USERNAME.title()))
-            newpad.attroff(curses.color_pair(3))
-            newpad.addstr("""  {}""".format(text.strip()))
-            newpad.addstr("\n")
-            pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
+            if not text.startswith("!!"):
+                if isSubpadFull(newpad, len(str(USERNAME + text).split("\n"))):
+                    newpad.clear()
+                    pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
+                    
+                newpad.attron(curses.color_pair(3))
+                newpad.addstr("[{}]\n".format(USERNAME.title()))
+                newpad.attroff(curses.color_pair(3))
+                for message in text.split("\n"):
+                    newpad.addstr("""  {}\n""".format(message.strip()))
+                newpad.addstr("\n")
+                pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
         update(True)
     # stdscr.getch()
 if __name__ == "__main__":

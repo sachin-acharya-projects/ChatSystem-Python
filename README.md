@@ -23,6 +23,7 @@ pip install colorama
 ````
 
 **Potential Upgrades**:
+_This includes both versions of chatbox(s)_
 - File sharing between Clients
 - Video Communication
 - Audio Communication
