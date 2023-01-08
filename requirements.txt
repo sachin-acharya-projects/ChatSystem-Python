@@ -1,0 +1,4 @@
+windows-curses
+cursed
+errno
+configparser
