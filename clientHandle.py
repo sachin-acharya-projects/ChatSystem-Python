@@ -3,13 +3,14 @@ import socket, curses, errno # os, sys
 
 class ClientHandle:
     HEADER_LENGTH: int = 10
-    IP: str = "127.0.0.1"
     PORT: int = 1234
-    def __init__(self, parent, window, refresh_param, username: str):
+    def __init__(self, parent, window, refresh_param, username: str,  PORT: int, IP: str = None):
         self.window: CursedWindow = window # only for auto-complete (type hint)
         self.uname: str = username
-        self.parent = parent
-        self.refresh_param = refresh_param
+        self.parent: CursedWindow = parent
+        self.refresh_param: tuple(*int) = refresh_param
+        self.IP: str = IP if IP else '127.0.0.1'
+        self.PORT: int = PORT if PORT else 8888
     def connectToserver(self):
         self.client_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         isInformed = False

@@ -2,7 +2,8 @@ from curses import wrapper
 from curses.textpad import Textbox
 from threading import Thread
 from clientHandle import ClientHandle
-import curses, inspect # os
+import curses, inspect, os
+import configparser
 
 # Global Variables
 isFirst = True
@@ -82,7 +83,7 @@ def handleKeystroke(keystroke: int, window):
         update(False)
     return keystroke
 
-def main(stdscr: curses.initscr, USERNAME: str = "Guest"):
+def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     stdscr.clear()
     stdscr.nodelay(True)
 
@@ -141,7 +142,8 @@ def main(stdscr: curses.initscr, USERNAME: str = "Guest"):
     box = Textbox(subwindow, insert_mode=True) # disable previous character overiding
     subwindow.addstr("Press [ENTER] to continue")
     subwindow.refresh()
-    clientHandle = ClientHandle(pad, newpad, (0, 0, 0, 0, win_one_height, win_one_width),USERNAME)
+    USERNAME = USERNAME if USERNAME else "Guest"
+    clientHandle = ClientHandle(pad, newpad, (0, 0, 0, 0, win_one_height, win_one_width),USERNAME, ip_address, port)
     clientHandle.connectToserver()
     while True:
         box.edit(lambda x: handleKeystroke(x, subwindow))
@@ -194,5 +196,27 @@ def main(stdscr: curses.initscr, USERNAME: str = "Guest"):
         update(True)
     # stdscr.getch()
 if __name__ == "__main__":
-    uname: str = input("What is your username?\n").title()
-    wrapper(lambda x: main(x, uname))
+    config = configparser.ConfigParser()
+    config.read('configuration.ini')
+    try:
+        username = config['Client']['USERNAME']
+        ip_add = config['Client']['IP']
+        port = int(config['Client']['PORT'])
+    except KeyError:
+        username = input("What is your username? ")
+        ip_add = input("What is the IP ADDRESS of server(127.0.0.1)\n")
+        ip_add = ip_add if ip_add else '127.0.0.1'
+        port = input("Which PORT is server running?(8888) ")
+        port = port if port else 8888
+        
+        print("[information] If you want to avoid the hassel of providing all this parameter one by one")
+        print("you can following following method")
+        print("""Store [CONFIGURATION] Locally
+              1. Create a File named configuration.ini in {}
+              2. Edit the file (.ini) file and write as following
+              [Client]
+                USERNAME = YOUR_USERNAME
+                IP = IP_ADDRESS_OF_SERVER
+                PORT = PORT_ON_WHICH_SERVER_IS_RUNNING
+        """.format(os.path.dirname(os.path.abspath(__file__))))
+    wrapper(lambda x: main(x, ip_add, port, username))

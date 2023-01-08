@@ -1,9 +1,11 @@
 from coloredPrint import ColoredText, Fore, Style
 import socket, select, sys, datetime
+from get_ip import whatsmyip
 
 HEADER_LENGTH = 10
-IP = '127.0.0.1'
-PORT = 1234
+IP: str = '127.0.0.1'
+PORT: int = 1234
+PUBLIC_IP: str = whatsmyip() ; PUBLIC_IP: str = PUBLIC_IP if PUBLIC_IP else IP
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -11,7 +13,7 @@ server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 ColoredText.systemMessage(f"""
     Listenning For Connections
     
-    HOST: {IP}
+    HOST: {PUBLIC_IP} (LOCALLY)
     PORT: {PORT}
 """)
 server_socket.bind((IP, PORT))
