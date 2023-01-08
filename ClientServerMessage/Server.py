@@ -3,7 +3,7 @@ import socket, select, sys, datetime
 from get_ip import whatsmyip
 
 HEADER_LENGTH = 10
-IP: str = '127.0.0.1'
+IP: str = '0.0.0.0' # Loop back IP work awesome 😒
 PORT: int = 1234
 PUBLIC_IP: str = whatsmyip() ; PUBLIC_IP: str = PUBLIC_IP if PUBLIC_IP else IP
 

@@ -10,7 +10,8 @@ class ClientHandle:
         self.parent: CursedWindow = parent
         self.refresh_param: tuple(*int) = refresh_param
         self.IP: str = IP if IP else '127.0.0.1'
-        self.PORT: int = PORT if PORT else 8888
+        self.PORT: str = PORT if PORT else 8888
+        
     def connectToserver(self):
         self.client_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         isInformed = False

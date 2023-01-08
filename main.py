@@ -143,7 +143,7 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     subwindow.addstr("Press [ENTER] to continue")
     subwindow.refresh()
     USERNAME = USERNAME if USERNAME else "Guest"
-    clientHandle = ClientHandle(pad, newpad, (0, 0, 0, 0, win_one_height, win_one_width),USERNAME, ip_address, port)
+    clientHandle = ClientHandle(pad, newpad, (0, 0, 0, 0, win_one_height, win_one_width),USERNAME, IP=ip_address, PORT=port)
     clientHandle.connectToserver()
     while True:
         box.edit(lambda x: handleKeystroke(x, subwindow))
@@ -207,7 +207,7 @@ if __name__ == "__main__":
         ip_add = input("What is the IP ADDRESS of server(127.0.0.1)\n")
         ip_add = ip_add if ip_add else '127.0.0.1'
         port = input("Which PORT is server running?(8888) ")
-        port = port if port else 8888
+        port = int(port) if port else 8888
         
         print("[information] If you want to avoid the hassel of providing all this parameter one by one")
         print("you can following following method")
@@ -218,5 +218,7 @@ if __name__ == "__main__":
                 USERNAME = YOUR_USERNAME
                 IP = IP_ADDRESS_OF_SERVER
                 PORT = PORT_ON_WHICH_SERVER_IS_RUNNING
+                
+            (OMIT "" or '')
         """.format(os.path.dirname(os.path.abspath(__file__))))
-    wrapper(lambda x: main(x, ip_add, port, username))
+    wrapper(lambda x: main(x, ip_address=ip_add, port=port, USERNAME=username))
