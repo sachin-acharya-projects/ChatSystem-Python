@@ -5,7 +5,8 @@ from get_ip import whatsmyip
 HEADER_LENGTH = 10
 IP: str = '0.0.0.0' # Loop back IP work awesome 😒
 PORT: int = 1234
-PUBLIC_IP: str = whatsmyip() ; PUBLIC_IP: str = PUBLIC_IP if PUBLIC_IP else IP
+# PUBLIC_IP: str = whatsmyip() ; PUBLIC_IP: str = PUBLIC_IP if PUBLIC_IP else IP
+PUBLIC_IP = IP
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -60,7 +61,7 @@ try:
                 messages_chunks.append(user['header'] + user['data'] + msg_header + msg)
             else:
                 message = receive_message(notified_socket)
-                if message is False:
+                if not message:
                     ColoredText.info("[DISCONNECTED] {}:{}".format(clients[notified_socket]['data'].decode('utf-8'), clients[notified_socket]['header'].decode('utf-8')))
                     for sock in clients:
                         if sock != notified_socket:
