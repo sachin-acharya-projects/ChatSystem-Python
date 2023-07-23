@@ -1,33 +1,45 @@
 from curses import wrapper
 from curses.textpad import Textbox
 from threading import Thread
-from clientHandle import ClientHandle
-import curses, inspect, os
+from packages import HandleClient, ColoredText
+import curses
+import inspect
+import os
 import configparser
 
 # Global Variables
 isFirst = True
 closeConnection = False
 isFirstMessage = True
+
+
 def whichIsParent():
     return inspect.stack()[2][3]
+
+
 def print_stuff(*array):
     print("From " + whichIsParent(), " ".join(array))
+
+
 def setCloseConnection(reset=False):
     global closeConnection
     if reset:
         closeConnection = True
     return closeConnection
+
+
 def isSubpadFull(subpad, len_: int = 0):
     height, _ = subpad.getmaxyx()
     cursor_y, _ = subpad.getyx()
     return (cursor_y + len_) > height - 2
-def handleReceivedMessages(parent, refresh_param: tuple, window, clientHandle: ClientHandle):
+
+
+def handleReceivedMessages(parent, refresh_param: tuple, window, handleClient: HandleClient):
     global isFirstMessage
     while True:
         if setCloseConnection():
             break
-        incomming: tuple(str, str) = clientHandle.getMessage()
+        incomming: tuple(str, str) = handleClient.getMessage()
         if incomming:
             username, message = incomming
             if isFirstMessage:
@@ -43,12 +55,16 @@ def handleReceivedMessages(parent, refresh_param: tuple, window, clientHandle: C
                 window.addstr("""  {}\n""".format(mess))
             window.addstr("\n")
             parent.refresh(*refresh_param)
+
+
 def update(n=None):
     global isFirst
     if not n is None:
         isFirst = n
     return isFirst
-def handleKeystroke(keystroke: int, window):
+
+
+def handleKeystroke(keystroke: int, window, handleClient):
     "Handle Keystroke -- Kinda like Keypress Event"
     ###############################################
     # KEYSTROKE CHART                             #
@@ -61,27 +77,38 @@ def handleKeystroke(keystroke: int, window):
     # Delete 330                                  #
     # Control-D 4 (Delete Character Under Curser) #
     ###############################################
+
+    # Handling Submit
     if keystroke == 10:
         return 7
     if keystroke == 7:
         # Disabling Control-G
         return
+
+    # Handling Line Break
     if keystroke == 529:
         return 14
     if keystroke == 14:
         # Disabling Control-N
         return
+
+    # Handling Delete Character
     if keystroke == 330:
         return 4
     if keystroke == 4:
         return
-    if keystroke == '\x1b':
-        exit()
+
+    if keystroke == '\x1b':  # Don't know what key is this
+        handleClient.closeConnection()
+        setCloseConnection(True)
+        exit(0)
+
     if update():
         window.clear()
         # global isFirst
         update(False)
     return keystroke
+
 
 def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     stdscr.clear()
@@ -112,7 +139,8 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     newpad.attroff(curses.color_pair(3))
 
     attaching_string = '-' * 4
-    message = attaching_string + "Logged in as {}".format(USERNAME) + attaching_string
+    message = attaching_string + \
+        "Logged in as {}".format(USERNAME) + attaching_string
     message_diff = int(((win_one_width - 2) // 2)) + len(message) // 2
     string: str = f"{message:>{message_diff}}"
     newpad.addstr("\n")
@@ -139,20 +167,22 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     subwindow = window.subwin(6, columns - 4, lines - 7, 2)
     window.refresh()
 
-    box = Textbox(subwindow, insert_mode=True) # disable previous character overiding
+    # disable previous character overiding
+    box = Textbox(subwindow, insert_mode=True)
     subwindow.addstr("Press [ENTER] to continue")
     subwindow.refresh()
     USERNAME = USERNAME if USERNAME else "Guest"
-    clientHandle = ClientHandle(pad, newpad, (0, 0, 0, 0, win_one_height, win_one_width),USERNAME, IP=ip_address, PORT=port)
-    clientHandle.connectToserver()
+    handleClient = HandleClient(
+        pad, newpad, (0, 0, 0, 0, win_one_height, win_one_width), USERNAME, IP=ip_address, PORT=port)
+    handleClient.connectToserver()
     while True:
-        box.edit(lambda x: handleKeystroke(x, subwindow))
+        box.edit(lambda x: handleKeystroke(x, subwindow, handleClient))
         text: str = box.gather().strip()
         subwindow.clear()
         subwindow.addstr("Enter your Message")
         subwindow.refresh()
         if text.strip().lower() == ':exit':
-            clientHandle.closeConnection()
+            handleClient.closeConnection()
             setCloseConnection(True)
             break
         if text.strip().startswith(":"):
@@ -161,31 +191,35 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
                 commands: list[str] = text.split(";")
                 for command in commands:
                     if command.lower().startswith("!!"):
-                        if not clientHandle.sendMessage(command.strip()):
-                            newpad.addstr("[CONNECTION CLOSED]", curses.color_pair(5))
-                            clientHandle.closeConnection()
+                        if not handleClient.sendMessage(command.strip()):
+                            newpad.addstr(
+                                "[CONNECTION CLOSED]",
+                                curses.color_pair(5)
+                            )
+                            handleClient.closeConnection()
                             setCloseConnection(True)
                     if command.lower() == ':exit':
-                        clientHandle.closeConnection()
+                        handleClient.closeConnection()
                         setCloseConnection(True)
                         break
             continue
         global isFirstMessage
         if isFirstMessage:
             newpad.clear()
-            Thread(target=handleReceivedMessages, args=(pad, (0, 0, 0, 0, win_one_height, win_one_width),newpad, clientHandle)).start()
+            Thread(target=handleReceivedMessages, args=(
+                pad, (0, 0, 0, 0, win_one_height, win_one_width), newpad, handleClient)).start()
             isFirstMessage = False
             continue
-        if not clientHandle.sendMessage(text.strip()):
+        if not handleClient.sendMessage(text.strip()):
             newpad.addstr("[CONNECTION CLOSED]", curses.color_pair(5))
-            clientHandle.closeConnection()
+            handleClient.closeConnection()
             setCloseConnection(True)
         else:
             if not text.startswith("!!"):
                 if isSubpadFull(newpad, len(str(USERNAME + text).split("\n"))):
                     newpad.clear()
                     pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
-                    
+
                 newpad.attron(curses.color_pair(3))
                 newpad.addstr("[{}]\n".format(USERNAME.title()))
                 newpad.attroff(curses.color_pair(3))
@@ -194,7 +228,22 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
                 newpad.addstr("\n")
                 pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
         update(True)
+
+
     # stdscr.getch()
+INFOTEXT: str = """
+Informations
+
+If you want to avoid the hassel of providing all these inputs one by one, you can follow the given steps
+    
+    1. Create a file named configuration.ini in \n\t{}
+    2. Edit the file and write following configurations
+    
+    [Client]
+        USERNAME = YOUR_USERNAME
+        IP = IP_ADDRESS_OF_SERVER
+        PORT = PORT_FOR_SERVER
+"""
 if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read('configuration.ini')
@@ -203,22 +252,29 @@ if __name__ == "__main__":
         ip_add = config['Client']['IP']
         port = int(config['Client']['PORT'])
     except KeyError:
-        username = input("What is your username? ")
-        ip_add = input("What is the IP ADDRESS of server(127.0.0.1)\n")
-        ip_add = ip_add if ip_add else '127.0.0.1'
-        port = input("Which PORT is server running?(8888) ")
-        port = int(port) if port else 8888
-        
-        print("[information] If you want to avoid the hassel of providing all this parameter one by one")
-        print("you can following following method")
-        print("""Store [CONFIGURATION] Locally
-              1. Create a File named configuration.ini in {}
-              2. Edit the file (.ini) file and write as following
-              [Client]
-                USERNAME = YOUR_USERNAME
-                IP = IP_ADDRESS_OF_SERVER
-                PORT = PORT_ON_WHICH_SERVER_IS_RUNNING
-                
-            (OMIT "" or '')
-        """.format(os.path.dirname(os.path.abspath(__file__))))
+        ColoredText.info("What is your Username?")
+        username = input(">> ").strip()
+
+        ColoredText.info("\nWhat is the Server's IP Address? (127.0.0.1)")
+        ip_add = input(">> ").strip()
+        if ip_add == '':
+            ip_add = '127.0.0.1'
+            print(f"\033[1A>> 127.0.0.1")
+
+        ColoredText.info("\nWhich PORT is Server running on? (8888)")
+        port = input(">> ").strip()
+        if port == '':
+            port = 8888
+            print(f"\033[1A>> 8888")
+
+        ColoredText.systemMessage(INFOTEXT.format(
+            os.path.dirname(os.path.abspath(__file__))))
+
+        ColoredText.info("\nAre you sure to continue? (E)xit")
+        cont = input(">> ").strip()
+        if cont == '':
+            print(f"\033[1A>> Continue")
+        elif cont.lower() == 'e':
+            exit(0)
+
     wrapper(lambda x: main(x, ip_address=ip_add, port=port, USERNAME=username))

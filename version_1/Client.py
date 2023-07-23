@@ -1,9 +1,5 @@
-from coloredPrint import ColoredText, Fore
+from packages import *
 import socket, sys, os
-
-HEADER_LENGTH = 10
-IP = '127.0.0.1'
-PORT = 1234
 
 ColoredText.info("What is your Username?")
 uname = input(">> ")

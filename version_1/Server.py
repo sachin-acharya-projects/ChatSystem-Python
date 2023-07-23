@@ -1,12 +1,8 @@
-from coloredPrint import ColoredText, Fore, Style
+from packages import *
 import socket, select, sys, datetime
-from get_ip import whatsmyip
 
-HEADER_LENGTH = 10
-IP: str = '0.0.0.0' # Loop back IP work awesome 😒
-PORT: int = 1234
 # PUBLIC_IP: str = whatsmyip() ; PUBLIC_IP: str = PUBLIC_IP if PUBLIC_IP else IP
-PUBLIC_IP = IP
+PUBLIC_IP = IP # can also use 0.0.0.0
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
