@@ -156,7 +156,7 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     BACKCSPACE         CLEAR THE CHARACTER UNDER CURSOR
     ENTER :EXIT        Exit the current window
     
-    PRESS [ENTER] TO CONTINUE   
+    PRESS [ENTER] TO CONTINUE
     """.upper(), curses.A_BOLD)
 
     pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
