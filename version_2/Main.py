@@ -1,4 +1,5 @@
 from curses import wrapper
+from cursed import window
 from curses.textpad import Textbox
 from threading import Thread
 from packages import HandleClient, ColoredText
@@ -6,6 +7,7 @@ import curses
 import inspect
 import os
 import configparser
+import datetime
 
 # Global Variables
 isFirst = True
@@ -34,12 +36,14 @@ def isSubpadFull(subpad, len_: int = 0):
     return (cursor_y + len_) > height - 2
 
 
-def handleReceivedMessages(parent, refresh_param: tuple, window, handleClient: HandleClient):
+def handleReceivedMessages(
+    parent: window.CursedWindow, refresh_param: tuple, window: window.CursedWindow, handleClient: HandleClient
+):
     global isFirstMessage
     while True:
         if setCloseConnection():
             break
-        incomming: tuple(str, str) = handleClient.getMessage()
+        incomming: tuple[str, str] = handleClient.getMessage()
         if incomming:
             username, message = incomming
             if isFirstMessage:
@@ -48,11 +52,34 @@ def handleReceivedMessages(parent, refresh_param: tuple, window, handleClient: H
             if isSubpadFull(window, len(str(username + message).split("\n"))):
                 window.clear()
                 parent.refresh(*refresh_param)
-            window.attron(curses.color_pair(3))
-            window.addstr("[{}]\n".format(username.title()))
-            window.attroff(curses.color_pair(3))
+
+            name = username
+            date = ""
+            if "(" in username:
+                name, date = username.split("(")
+                date = date.split(")")[0].strip()
+            window.addstr("┌──", curses.color_pair(4))
+            window.addstr("(")
+            window.addstr("%s" % name.strip().title(), curses.color_pair(6))
+            window.addstr(")")
+            window.addstr(" - Incoming")
+            window.addstr("\n| ")
+            if date != "":
+                date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+                date = datetime.datetime.strftime(date, "%d %B, %Y %I:%M:%S %p")
+                window.addstr(f"{date}", curses.color_pair(7))
+            else:
+                window.addstr(f"System Notification", curses.color_pair(7))
+            window.addstr("\n└──$ ")
+            if "[CONNECTED" in message:
+                date = message.split("-", 1)[1].split("]")[0].strip()
+                date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+                date = datetime.datetime.strftime(date, "%d %B, %Y %I:%M:%S %p")
+                name_ = message.split("]")[1].strip()
+                window.addstr(f"""{name_} connected at {date}\n""")
+                message = ""
             for mess in message.split("\n"):
-                window.addstr("""  {}\n""".format(mess))
+                window.addstr("""{}\n""".format(mess))
             window.addstr("\n")
             parent.refresh(*refresh_param)
 
@@ -98,7 +125,7 @@ def handleKeystroke(keystroke: int, window, handleClient):
     if keystroke == 4:
         return
 
-    if keystroke == '\x1b':  # Don't know what key is this
+    if keystroke == "\x1b":  # Don't know what key is this
         handleClient.closeConnection()
         setCloseConnection(True)
         exit(0)
@@ -119,6 +146,8 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
     curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)
     curses.init_pair(5, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(6, curses.COLOR_BLUE, curses.COLOR_BLACK)
+    curses.init_pair(7, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
 
     # size = os.get_terminal_size()
     lines, columns = stdscr.getmaxyx()
@@ -138,15 +167,15 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     newpad.addstr("\n")
     newpad.attroff(curses.color_pair(3))
 
-    attaching_string = '-' * 4
-    message = attaching_string + \
-        "Logged in as {}".format(USERNAME) + attaching_string
+    attaching_string = "-" * 4
+    message = attaching_string + "Logged in as {}".format(USERNAME) + attaching_string
     message_diff = int(((win_one_width - 2) // 2)) + len(message) // 2
     string: str = f"{message:>{message_diff}}"
     newpad.addstr("\n")
     newpad.addstr(string)
     newpad.addstr("\n")
-    newpad.addstr(f"""
+    newpad.addstr(
+        f"""
     Following are the shortcut(s) which will come in handy
 
     KEYS               EVENT
@@ -157,7 +186,9 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     ENTER :EXIT        Exit the current window
     
     PRESS [ENTER] TO CONTINUE
-    """.upper(), curses.A_BOLD)
+    """.upper(),
+        curses.A_BOLD,
+    )
 
     pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
     window = curses.newwin(8, columns - 2, lines - 8, 1)
@@ -173,7 +204,13 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
     subwindow.refresh()
     USERNAME = USERNAME if USERNAME else "Guest"
     handleClient = HandleClient(
-        pad, newpad, (0, 0, 0, 0, win_one_height, win_one_width), USERNAME, IP=ip_address, PORT=port)
+        pad,
+        newpad,
+        (0, 0, 0, 0, win_one_height, win_one_width),
+        USERNAME,
+        IP=ip_address,
+        PORT=port,
+    )
     handleClient.connectToserver()
     while True:
         box.edit(lambda x: handleKeystroke(x, subwindow, handleClient))
@@ -181,7 +218,7 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
         subwindow.clear()
         subwindow.addstr("Enter your Message")
         subwindow.refresh()
-        if text.strip().lower() == ':exit':
+        if text.strip().lower() == ":exit":
             handleClient.closeConnection()
             setCloseConnection(True)
             break
@@ -192,13 +229,10 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
                 for command in commands:
                     if command.lower().startswith("!!"):
                         if not handleClient.sendMessage(command.strip()):
-                            newpad.addstr(
-                                "[CONNECTION CLOSED]",
-                                curses.color_pair(5)
-                            )
+                            newpad.addstr("[CONNECTION CLOSED]", curses.color_pair(5))
                             handleClient.closeConnection()
                             setCloseConnection(True)
-                    if command.lower() == ':exit':
+                    if command.lower() == ":exit":
                         handleClient.closeConnection()
                         setCloseConnection(True)
                         break
@@ -206,8 +240,15 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
         global isFirstMessage
         if isFirstMessage:
             newpad.clear()
-            Thread(target=handleReceivedMessages, args=(
-                pad, (0, 0, 0, 0, win_one_height, win_one_width), newpad, handleClient)).start()
+            Thread(
+                target=handleReceivedMessages,
+                args=(
+                    pad,
+                    (0, 0, 0, 0, win_one_height, win_one_width),
+                    newpad,
+                    handleClient,
+                ),
+            ).start()
             isFirstMessage = False
             continue
         if not handleClient.sendMessage(text.strip()):
@@ -220,17 +261,27 @@ def main(stdscr: curses.initscr, ip_address: str, port: int, USERNAME: str):
                     newpad.clear()
                     pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
 
-                newpad.attron(curses.color_pair(3))
-                newpad.addstr("[{}]\n".format(USERNAME.title()))
-                newpad.attroff(curses.color_pair(3))
+                newpad.addstr("┌──", curses.color_pair(4))
+                newpad.addstr("(")
+                newpad.addstr("%s" % USERNAME.strip().title(), curses.color_pair(6))
+                newpad.addstr(")")
+                newpad.addstr(" - Outgoing")
+                newpad.addstr("\n| ")
+                date = datetime.datetime.now().strftime("%d %B, %Y %I:%M:%S %p")
+                newpad.addstr(f"{date}", curses.color_pair(7))
+                newpad.addstr("\n└──$ ")
+                # newpad.attron(curses.color_pair(3))
+                # newpad.addstr("[Hi{}]\n".format(USERNAME.title()))
+                # newpad.attroff(curses.color_pair(3))
                 for message in text.split("\n"):
-                    newpad.addstr("""  {}\n""".format(message.strip()))
+                    newpad.addstr("""{}\n""".format(message.strip()))
                 newpad.addstr("\n")
                 pad.refresh(0, 0, 0, 0, win_one_height, win_one_width)
         update(True)
 
-
     # stdscr.getch()
+
+
 INFOTEXT: str = """
 Informations
 
@@ -246,35 +297,36 @@ If you want to avoid the hassel of providing all these inputs one by one, you ca
 """
 if __name__ == "__main__":
     config = configparser.ConfigParser()
-    config.read('configuration.ini')
+    config.read("configuration.ini")
     try:
-        username = config['Client']['USERNAME']
-        ip_add = config['Client']['IP']
-        port = int(config['Client']['PORT'])
+        username = config["Client"]["USERNAME"]
+        ip_add = config["Client"]["IP"]
+        port = int(config["Client"]["PORT"])
     except KeyError:
         ColoredText.info("What is your Username?")
         username = input(">> ").strip()
 
         ColoredText.info("\nWhat is the Server's IP Address? (127.0.0.1)")
         ip_add = input(">> ").strip()
-        if ip_add == '':
-            ip_add = '127.0.0.1'
+        if ip_add == "":
+            ip_add = "127.0.0.1"
             print(f"\033[1A>> 127.0.0.1")
 
-        ColoredText.info("\nWhich PORT is Server running on? (8888)")
+        ColoredText.info("\nWhich PORT is Server running on? (8000)")
         port = input(">> ").strip()
-        if port == '':
-            port = 8888
-            print(f"\033[1A>> 8888")
+        if port == "" or not port.isdigit():
+            port = 8000
+            print(f"\033[1A>> 8000")
 
-        ColoredText.systemMessage(INFOTEXT.format(
-            os.path.dirname(os.path.abspath(__file__))))
+        ColoredText.systemMessage(
+            INFOTEXT.format(os.path.dirname(os.path.abspath(__file__)))
+        )
 
         ColoredText.info("\nAre you sure to continue? (E)xit")
         cont = input(">> ").strip()
-        if cont == '':
+        if cont == "":
             print(f"\033[1A>> Continue")
-        elif cont.lower() == 'e':
+        elif cont.lower() == "e":
             exit(0)
 
-    wrapper(lambda x: main(x, ip_address=ip_add, port=port, USERNAME=username))
+    wrapper(lambda x: main(x, ip_address=ip_add, port=int(port), USERNAME=username))
